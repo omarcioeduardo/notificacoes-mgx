@@ -1,0 +1,49 @@
+  name: Enviar Notificações Diárias
+
+  on:
+    schedule:
+      # Horários em UTC (Brasília = UTC-3)
+      # 08:00 BRT = 11:00 UTC
+      - cron: '0 11 * * *'
+      # 14:00 BRT = 17:00 UTC
+      - cron: '0 17 * * *'
+      # 20:00 BRT = 23:00 UTC
+      - cron: '0 23 * * *'
+
+    # Permite executar manualmente para teste
+    workflow_dispatch:
+
+  jobs:
+    send-notifications:
+      runs-on: ubuntu-latest
+
+      steps:
+      - name: Enviar notificações via API
+        run: |
+          # Data de hoje
+          TODAY=$(date '+%Y-%m-%d')
+
+          # Fazer requisição POST para a API
+          response=$(curl -s -w "\nHTTP_CODE:%{http_code}" -X POST \
+            -H "Content-Type: application/json" \
+            -d "{\"action\": \"send_notifications\", \"date\": \"$TODAY\"}"
+   \
+            "https://mgxdigital.com.br/relatorios/api.php")
+
+          # Extrair código HTTP e body
+          body=$(echo "$response" | sed '$d')
+          http_code=$(echo "$response" | tail -n1 | cut -d: -f2)
+
+          # Mostrar resultado
+          echo "Data: $TODAY"
+          echo "Código HTTP: $http_code"
+          echo "Resposta: $body"
+
+          # Verificar sucesso
+          if [ "$http_code" -eq "200" ]; then
+            echo "✅ Notificações enviadas com sucesso!"
+            exit 0
+          else
+            echo "❌ Erro ao enviar notificações"
+            exit 1
+          fi
